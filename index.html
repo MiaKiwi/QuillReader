@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuillReader | mia.kiwi</title>
+    <link rel="icon" href="https://static.mia.kiwi/images/favicon.ico" type="image/x-icon">
+
+    <link rel="stylesheet" href="./assets/styles/kwui.min.css">
+    <link rel="stylesheet" href="./assets/styles/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous">
+
+    <script src="./assets/scripts/kapir.js"></script>
+    <script src="./assets/scripts/kwui.min.js"></script>
+    <script src="./assets/scripts/app.js"></script>
+    <script src="./assets/scripts/relative-time.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/lib/marked.umd.js"></script>
+</head>
+
+<body>
+
+    <noscript>This website requires JavaScript to function properly.</noscript>
+
+    <header id="header" class="header readable-width block-center text-small">
+        <div class="app-breadcrumbs" id="app-breadcrumbs"></div>
+        <div class="block-center posts-nav" style="width: fit-content; display: none;" id="posts-nav">
+            <button disabled data-offset="0" id="posts-nav-prev" title="Previous" class="btn btn-empty btn-primary"><i class="fa-solid fa-chevron-left"></i></button>
+            <span class="text-center text-muted"><small id="posts-nav-counter"></small></span>
+            <button disabled data-offset="0" id="posts-nav-next" title="Next" class="btn btn-empty btn-primary"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="header-links" id="header-links"></div>
+    </header>
+
+    <main class="main" id="main"></main>
+
+    <footer class="footer">
+        <div class="block-center links-grid readable-width">
+            <a href="https://mia.kiwi" class="link">My website</a>
+            <a href="https://mia.kiwi/projects/kiwi.mia.0033" class="link">Get KiwiQuill</a>
+            <a href="https://mia.kiwi/projects/kiwi.mia.0038" class="link">Get QuillReader</a>
+            <a href="https://mia.kiwi/projects/" class="link">My other projects</a>
+        </div>
+        <p class="text-center text-muted"><small>2025 &COPY; DELAN Mia</small></p>
+    </footer>
+
+
+
+    <script>
+        const MAIN = document.getElementById("main");
+        const HEADER = document.getElementById("header");
+        const BREADCRUMBS = document.getElementById("app-breadcrumbs");
+        const HEADER_LINKS = document.getElementById("header-links");
+
+
+
+        const PAGINATION = {
+            limit: 50, // Number of posts to show per page
+            offset: 0
+        }
+
+
+
+        const POSTS_NAV = document.getElementById("posts-nav");
+        const POSTS_NAV_PREV = document.getElementById("posts-nav-prev");
+        const POSTS_NAV_NEXT = document.getElementById("posts-nav-next");
+        const POSTS_NAV_COUNTER = document.getElementById("posts-nav-counter");
+
+        POSTS_NAV_PREV.addEventListener("click", async () => {
+            let previousOffset = parseInt(POSTS_NAV_PREV.dataset.offset);
+
+            PAGINATION.offset = previousOffset;
+
+            await loadApp();
+        });
+
+        POSTS_NAV_NEXT.addEventListener("click", async () => {
+            let nextOffset = parseInt(POSTS_NAV_NEXT.dataset.offset);
+
+            PAGINATION.offset = nextOffset;
+
+            await loadApp();
+        });
+
+
+
+        // Update relative time elements
+        newRtjsInterval(MAIN, 500);
+    </script>
+    <script src="assets/scripts/router.js"></script>
+
+</body>
+
+</html>
