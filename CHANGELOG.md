@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [STVP](https://mia.kiwi/projects/stvp).
 
-## [Unreleased]
+## [25.0.6] - 2025-08-21
 
 ### Added
 
@@ -20,6 +20,12 @@ and this project adheres to [STVP](https://mia.kiwi/projects/stvp).
 - Endpoint to get random post
 - Endpoint to list all tags
 - Posts pagination
+- README file
+- Post images open in new window when clicked
+- Post tags overflow shown when hovered or focused
+- Disclaimer when trying to open a post with the 'NSFW' tag
+- Preview cards with the tag 'NSFW' are blurred
+- Post source (API root domain) data for posts hosted at a different domain than where QuillReader is installed
 
 ### Changed
 
@@ -29,6 +35,9 @@ and this project adheres to [STVP](https://mia.kiwi/projects/stvp).
 - The tag search prefix is now "tag/" instead of "tag-"
 - Preview cards only show three tags and display the number of hidden tags if there are more than that
 - Rebuilt the routing system
+- Post links style
+- 'NSFW' tag is automatically moved to the start of the `tags` array
+- `pathExists` now checks the `/metadata` endpoint to check if a post exists
 
 ### Removed
 

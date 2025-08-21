@@ -17,6 +17,11 @@ class Post {
         this.parsed = Post.parse(raw);
         this.metadata = metadata;
         this.api = api;
+
+        // If the post is marked as NSFW, move the tag at the start of the array
+        if (this.tags.includes("nsfw")) {
+            this.metadata.tags = ["nsfw", ...this.tags.filter(tag => tag !== "nsfw")];
+        }
     }
 
 
@@ -60,6 +65,13 @@ class Post {
 
 
 
+        // Make all images open in a new window when clicked
+        parsedDOM.querySelectorAll("img").forEach(img => {
+            img.setAttribute("onclick", `window.open(this.src, '_blank')`);
+        });
+
+
+
         return parsedDOM.body.innerHTML;
     }
 
@@ -76,8 +88,6 @@ class Post {
         card.classList.add("block-center");
         card.classList.add("text-wrap");
 
-
-
         // Add the post ID to the card
         card.id = this.id || this.title || this.path;
 
@@ -87,6 +97,29 @@ class Post {
         // Add the card to an article element
         let article = document.createElement("article");
         article.appendChild(card);
+
+
+
+        // If the post is NSFW, add the post-nsfw class to the card and show a disclaimer
+        if (this.isNSFW()) {
+            card.classList.add("post-nsfw");
+
+            let modalId = "modal-post-nsfw-disclaimer";
+
+            let modal = getModal(
+                '<p>This post may contain NSFW content.</p><p>Do you wish to proceed?</p>',
+                '<p><span class="avatar avatar-negative"><i class="fa-solid fa-radiation"></i></span>Mature Content Ahead</p>',
+                `<a href="#" class="btn btn-negative"><i class="fa-solid fa-xmark"></i><span>&nbsp;No, send me back</span></a><button class="btn btn-fg btn-empty" onclick="document.getElementById('${modalId}').remove()">Yes, proceed to NSFW content</button>`,
+                false
+            );
+
+            modal.id = modalId;
+
+            // Increase the modal backdrop blur
+            modal.style.backdropFilter = "blur(15px)";
+
+            article.appendChild(modal);
+        }
 
         return article;
     }
@@ -128,7 +161,7 @@ class Post {
 
         // If the post has a title, prepend it to the description
         if (this.title) {
-            description = `<h2><a class="link link-uncolored" href="#${this.path}">${this.title}</a></h2>` + description;
+            description = `<h2><a class="link link-uncolored" href="#${this.path}">${this.title}</a></h2><span>${description}</span>`;
         }
 
 
@@ -146,7 +179,7 @@ class Post {
 
 
         // Create the post card element
-        let card = getCard(description, cardHeader, `<div>${this.getPostCardTagsContainer(3)}</div><div><span class="text-muted"><small>${footerContent.join("&nbsp;&bull; ")}</small></span></div>`);
+        let card = getCard(description, cardHeader || null, `<div>${this.getPostCardTagsContainer(3)}</div><div><span class="text-muted"><small>${footerContent.join("&nbsp;&bull; ")}</small></span></div>`);
 
 
 
@@ -155,6 +188,10 @@ class Post {
         card.classList.add("block-center");
         card.classList.add("text-wrap");
 
+        // If the post is NSFW, add the post-nsfw class to the preview card
+        if (this.isNSFW()) {
+            card.classList.add("post-nsfw");
+        }
 
         // Add the post ID to the card
         card.id = this.id || this.title || this.path
@@ -180,7 +217,7 @@ class Post {
 
 
     isNSFW() {
-        return this.tags?.includes("nsfw") || this.tags?.includes("nsfl") || this.tags?.includes("adult") || this.metadata.tags?.includes("18+") || this.metadata.tags?.includes("mature");
+        return this.tags?.includes("nsfw");
     }
 
 
@@ -212,6 +249,12 @@ class Post {
 
 
 
+        if (this.links && Object.keys(this.links).length > 0) {
+            body += this.getPostLinksContainer();
+        }
+
+
+
         // Add the post content
         body += this.parsed;
 
@@ -233,30 +276,35 @@ class Post {
 
 
 
-        if (this.links && Object.keys(this.links).length > 0) {
-            footer += this.getPostLinksContainer();
-        }
-
-
-
+        // Add the permalink to the post on the QuillReader instance
         footer += `<div class="post-authoring"><p><span class="avatar avatar-primary"><i class="fa-solid fa-link"></i></span><a href="#${this.id}" class="link">Permalink</a></p>`;
 
+        // Add the author
         if (author) {
             footer += `
                 <span title="Author"><span class="avatar avatar-fg"><i class="fa-solid fa-pen"></i></span><a class="link link-uncolored" href="#by/${author}">${author}</a></span>
             `
         }
 
+        // Add the published date
         if (datePublished && datePublished instanceof Date) {
             footer += `
                 <span title="Published"><span class="avatar avatar-fg"><i class="fa-solid fa-calendar-day"></i></span><time title="${datePublished.toLocaleDateString()}" data-rtjs="on" data-rtjs-precision="day" data-rtjs-exclude="millisecond,second,week,month" data-rtjs-dt="${datePublished.toISOString()}" datetime="${datePublished.toISOString()}">${datePublished.toLocaleDateString()}</time></span>
             `
         }
 
+        // Add the updated date
         if (dateUpdated && dateUpdated instanceof Date) {
             footer += `
                 <span title="Updated"><span class="avatar avatar-fg"><i class="fa-solid fa-calendar-plus"></i></span><time title="${dateUpdated.toLocaleDateString()}" data-rtjs="on" data-rtjs-precision="day" data-rtjs-exclude="millisecond,second,minute,week,month" data-rtjs-dt="${dateUpdated.toISOString()}" datetime="${dateUpdated.toISOString()}">${dateUpdated.toLocaleDateString()}</time></span>
             `
+        }
+
+        // Add the source of the post (KiwiQuill instance) if the domain is different
+        let apiRootDomain = new URL(API_ROOT).hostname;
+
+        if (apiRootDomain !== window.location.hostname) {
+            footer += `<span title="Source"><span class="avatar avatar-fg"><i class="fa-brands fa-sourcetree"></i></span><a class="link link-uncolored" href="//${apiRootDomain}">${apiRootDomain}</a></span>`;
         }
 
         footer += '</div>';
@@ -361,7 +409,19 @@ class Post {
             j--
         }
 
-        if (max < tags.length) container += `<span class="text-muted" title="${tags.length - max} hidden tag(s)"><small>&nbsp;+${tags.length - max}</small></span>`
+        if (max < tags.length) {
+            // container += `<span class="text-muted" title="${tags.length - max} hidden tag(s)"><small>&nbsp;+${tags.length - max}</small></span>`
+            container += `
+            <span class="post-tags-overflow-indicator" class="text-muted" title="${tags.length - max} other tag(s)"><small>&nbsp;+${tags.length - max}</small></span>
+            <div class="post-tags-overflow chips-container">
+                ${tags.slice(max).map(tag => {
+                let chip = Post.getTag(tag);
+                chip.classList.add("post-tag");
+                return chip.outerHTML;
+            }).join("")}
+            </div>
+            `;
+        }
 
         container += `</div>`;
 
@@ -381,7 +441,11 @@ class Post {
             let key = keys[i];
             let uri = links[key];
 
-            container += `<a class="link" href="${uri}" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-link"></i>&nbsp;${key}</a>`;
+            let linkCard = getCard(`<a class="link link-uncolored" href="${uri}" target="_blank" rel="noopener noreferrer">${key}</a>`, null, `<span class="text-muted text-small"><small>${uri}</small></span>`);
+
+            linkCard.classList.add("post-link");
+
+            container += linkCard.outerHTML;
         }
 
         container += `</div>`;
@@ -412,7 +476,12 @@ class Post {
     }
 
     get tags() {
-        return this.metadata?.tags ?? [];
+        let tags = this.metadata?.tags || [];
+
+        // Make tags lowercase
+        tags = tags.map(tag => tag.toLowerCase());
+
+        return tags;
     }
 
     get published() {
@@ -588,7 +657,8 @@ class Post {
 
 
     static async pathExists(path, api = API) {
-        let response = await api.fetch(`/posts/${path}`);
+        // Only fetch the post metadata to check if the path exists
+        let response = await api.fetch(`/posts/${path}/metadata`);
 
         return !response.isError();
     }

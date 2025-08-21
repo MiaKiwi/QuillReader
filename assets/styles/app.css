@@ -104,6 +104,10 @@ html {
     border-radius: 0.5em;
 }
 
+.post-card .card-body img {
+    cursor: pointer;
+}
+
 .post-card .table,
 .post-preview-card .table {
     word-break: keep-all;
@@ -127,15 +131,38 @@ html {
     padding-bottom: 0.5em;
 }
 
+.post-tags .post-tags-overflow {
+    display: none;
+}
+
+.post-tags:hover .post-tags-overflow,
+.post-tags:focus .post-tags-overflow,
+.post-tags:focus-within .post-tags-overflow,
+.post-tags:active .post-tags-overflow {
+    display: flex;
+}
+
+.post-tags:hover .post-tags-overflow-indicator,
+.post-tags:focus .post-tags-overflow-indicator,
+.post-tags:focus-within .post-tags-overflow-indicator,
+.post-tags:active .post-tags-overflow-indicator {
+    display: none;
+}
+
 .post-tags {
     font-size: smaller;
 }
 
+.post-link .card-footer {
+    margin: 0;
+    padding: 0;
+}
+
 .post-links {
-    display: flex;
-    flex-direction: row;
-    gap: 1em;
-    margin: 0.5em 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5em;
+    margin: 1em 0.5em;
 }
 
 .header {
@@ -174,4 +201,10 @@ html {
     gap: 1em;
     align-items: center;
     justify-content: center;
+}
+
+.post-preview-card.post-nsfw .card-header,
+.post-preview-card.post-nsfw .card-body span {
+    filter: blur(5px);
+    user-select: none;
 }
