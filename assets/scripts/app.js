@@ -1,5 +1,9 @@
-const API_ROOT = "https://quill.mia.kiwi/api/v1";
-const WEB_ROOT = "";
+if (!SETTINGS) {
+    throw "Must load settings first"
+}
+
+const API_ROOT = SETTINGS?.get("app.api", "https://quill.mia.kiwi/api/v1");
+const WEB_ROOT = SETTINGS?.get("app.web", "https://quill.mia.kiwi/");
 
 const API = new KapirApi(API_ROOT);
 
@@ -77,9 +81,9 @@ class Post {
 
 
 
-    getPostCard() {
+    async getPostCard() {
         // Create the post card element
-        let card = getCard(this.getPostCardBody(), this.getPostCardHeader(), this.getPostCardFooter());
+        let card = getCard(await this.getPostCardBody(), this.getPostCardHeader(), this.getPostCardFooter());
 
 
 
@@ -126,8 +130,8 @@ class Post {
 
 
 
-    showPostCard(container, htmlMeta = false) {
-        let card = this.getPostCard();
+    async showPostCard(container, htmlMeta = false) {
+        let card = await this.getPostCard();
 
         // Add the post card to the container
         container.appendChild(card);
@@ -226,7 +230,11 @@ class Post {
         let header = '';
 
         if (this.pinned) {
-            header += '<span class="text-muted"><small><i class="fa-solid fa-thumbtack fa-rotate-by" style="--fa-rotate-angle: 45deg;"></i>&nbsp;Pinned</small></span>'
+            header += '<span class="text-muted text-small"><small><i class="fa-solid fa-thumbtack fa-rotate-by" style="--fa-rotate-angle: 45deg;"></i>&nbsp;Pinned</small></span>'
+        }
+
+        if (this.unlisted) {
+            header += '<span class="text-muted text-small"><small><i class="fa-solid fa-eye-slash"></i>&nbsp;Unlisted &mdash; Only people with the link can view this post</small></span>'
         }
 
         if (this.getPostCardImage()) {
@@ -239,7 +247,7 @@ class Post {
 
 
 
-    getPostCardBody() {
+    async getPostCardBody() {
         let body = '';
 
 
@@ -259,6 +267,11 @@ class Post {
         body += this.parsed;
 
 
+
+        // Add the related posts container
+        if (this.relatedPosts?.length > 0) {
+            body += await this.getRelatedPostsContainer();
+        }
 
         return body;
     }
@@ -430,6 +443,55 @@ class Post {
 
 
 
+    async getRelatedPostsContainer(api = API) {
+        let relatedPosts = await this.fetchRelatedPosts(api);
+
+
+
+        // Get the preview cards for the related posts
+        let previewCards = relatedPosts.map(post => post.getPostPreviewCard().outerHTML).join("");
+
+        return `<h3 class="text-secondary" style="text-align: center; margin: 2em 0 0.25em 0;">Related Posts</h3><div class="related-posts">${previewCards}</div>`;
+    }
+
+
+
+    async fetchRelatedPosts(api = API) {
+        let relatedPosts = await Promise.all(this.relatedPosts.map(async post => {
+            // If the value is a URL, assume the post is hosted elsewhere
+            let postURL = null;
+
+            try {
+                postURL = new URL(post);
+            } catch {
+            }
+
+            if (postURL) {
+                // Only support local posts for now
+                console.warn("External posts are not supported yet", postURL);
+
+                // TODO: Support posts hosted on other KiwiQuill instances
+            } else {
+                // Check if the value given is an ID
+                if (await Post.idExists(post, api)) {
+                    return await Post.getById(post, api);
+                } else if (await Post.pathExists(post, api)) {
+                    return await Post.get(post, api);
+                }
+            }
+        }))
+
+
+
+        relatedPosts = relatedPosts.filter(post => post !== null && post !== undefined);
+
+
+
+        return relatedPosts;
+    }
+
+
+
     getPostLinksContainer() {
         let links = this.links;
         let keys = Object.keys(links);
@@ -508,8 +570,16 @@ class Post {
         return this.metadata?.pinned || false;
     }
 
+    get unlisted() {
+        return this.metadata?.visibility === "unlisted";
+    }
+
     get links() {
         return this.metadata?.links || {};
+    }
+
+    get relatedPosts() {
+        return this.metadata?.related_posts || [];
     }
 
 
@@ -541,7 +611,7 @@ class Post {
                 return 1;
             }
 
-            return new Date(b.published || b.updated) - new Date(a.published || a.updated);
+            return new Date(b.updated || b.published) - new Date(a.updated || a.published);
         });
 
 
@@ -731,4 +801,76 @@ function errorNoMatchingPosts(criteria = []) {
     let message = `<p class="text-muted text-center"><small><span class="avatar avatar-fg"><i class="fa-solid fa-magnifying-glass"></i></span>No posts to show</small></p>`;
 
     return message;
+}
+
+
+
+function getPageTitle({
+    sections = [],
+    separator = SETTINGS?.get("app.titleSeparator", " | "),
+    appName = SETTINGS?.get("app.name", "QuillReader")
+}) {
+    if (sections.length > 0) {
+        return `${sections.join(separator)}${separator}${appName}`;
+    }
+
+    return appName;
+}
+
+
+
+function setMetadata({
+    title = null,
+    metadata = []
+}) {
+    if (title) {
+        document.title = title;
+
+        metadata.push({ name: "title", property: "og:title", content: title });
+    }
+
+    metadata.forEach(({ name, property, content }) => {
+        // Find the meta tags with matching name or property
+        let tags = document.querySelectorAll(`meta[name="${name}"], meta[property="${property}"]`);
+
+        if (tags.length === 0) {
+            // Create a new meta tag if it doesn't exist
+            let tag = document.createElement("meta");
+
+            name ? tag.setAttribute("name", name) : null;
+            property ? tag.setAttribute("property", property) : null;
+
+            document.head.appendChild(tag);
+
+            tags = [tag];
+        }
+
+        // Set the content for the meta tags
+        tags.forEach(tag => {
+            tag.setAttribute("content", content);
+        });
+    });
+}
+
+
+
+function resetMetadata() {
+    let appName = SETTINGS?.get("app.name", "QuillReader");
+    let defaultMetadata = [
+        { name: "viewport", content: "width=device-width, initial-scale=1.0" },
+        { property: "og:url", content: window.location.href },
+        { property: "og:site_name", content: appName },
+        { name: "description", property: "og:description", content: SETTINGS?.get("app.description", "Description of your blog") }
+    ];
+
+    // Remove all existing meta tags
+    defaultMetadata.forEach(({ name, property }) => {
+        let tags = document.querySelectorAll(`meta[name="${name}"], meta[property="${property}"]`);
+        tags.forEach(tag => tag.remove());
+    });
+
+    setMetadata({
+        title: appName,
+        metadata: defaultMetadata
+    });
 }

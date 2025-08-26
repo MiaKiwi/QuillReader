@@ -98,6 +98,10 @@ html {
     align-items: start;
 }
 
+.posts-container article {
+    width: 100%;
+}
+
 .post-preview-card img,
 .post-card img {
     max-width: 100%;
@@ -207,4 +211,15 @@ html {
 .post-preview-card.post-nsfw .card-body span {
     filter: blur(5px);
     user-select: none;
+}
+
+.related-posts {
+    font-size: 0.7em;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.25em;
+    padding: 0.5em;
+    margin: 0 auto;
+    justify-content: center;
 }

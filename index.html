@@ -4,13 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuillReader | mia.kiwi</title>
+    <title>QuillReader</title>
     <link rel="icon" href="https://static.mia.kiwi/images/favicon.ico" type="image/x-icon">
 
     <link rel="stylesheet" href="./assets/styles/kwui.min.css">
     <link rel="stylesheet" href="./assets/styles/app.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous">
 
+    <script src="./assets/scripts/settings.js"></script>
     <script src="./assets/scripts/kapir.js"></script>
     <script src="./assets/scripts/kwui.min.js"></script>
     <script src="./assets/scripts/app.js"></script>
@@ -35,13 +36,13 @@
     <main class="main" id="main"></main>
 
     <footer class="footer">
-        <div class="block-center links-grid readable-width">
+        <div class="block-center links-grid readable-width" id="footer-links">
             <a href="https://mia.kiwi" class="link">My website</a>
             <a href="https://mia.kiwi/projects/kiwi.mia.0033" class="link">Get KiwiQuill</a>
             <a href="https://mia.kiwi/projects/kiwi.mia.0038" class="link">Get QuillReader</a>
             <a href="https://mia.kiwi/projects/" class="link">My other projects</a>
         </div>
-        <p class="text-center text-muted"><small>2025 &COPY; DELAN Mia</small></p>
+        <p class="text-center text-muted"><small id="footer-notice">&COPY; Copyright holder</small></p>
     </footer>
 
 
@@ -51,6 +52,8 @@
         const HEADER = document.getElementById("header");
         const BREADCRUMBS = document.getElementById("app-breadcrumbs");
         const HEADER_LINKS = document.getElementById("header-links");
+        const FOOTER_LINKS = document.getElementById("footer-links");
+        const FOOTER_NOTICE = document.getElementById("footer-notice");
 
 
 
@@ -83,6 +86,13 @@
         });
 
 
+
+        // Set the content of the footer
+        FOOTER_LINKS.innerHTML = SETTINGS?.get("app.footer.links", []).map(({ label, url }) => {
+            return `<a href="${url}" class="link">${label}</a>`;
+        }).join("");
+
+        FOOTER_NOTICE.innerHTML = SETTINGS?.get("app.footer.notice", "");
 
         // Update relative time elements
         newRtjsInterval(MAIN, 500);

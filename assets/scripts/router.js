@@ -64,10 +64,18 @@ async function loadApp() {
 
     let breadcrumbs = [];
 
+    resetMetadata();
+
 
 
     if (["tags", "tag", "tags/", "tag/"].includes(route)) {
         console.debug("Loading route: tags");
+
+        setMetadata({
+            title: getPageTitle({
+                sections: ["Tags"]
+            })
+        });
 
 
 
@@ -109,6 +117,14 @@ async function loadApp() {
         tag = decodeURIComponent(tag);
 
 
+
+        setMetadata({
+            title: getPageTitle({
+                sections: [`'${tag}'`, "Tags"]
+            })
+        });
+
+
         posts = await Post.search({ tags: [tag], pagination: PAGINATION });
 
         if (API.getLastResponse().isError() || posts.length === 0) {
@@ -128,6 +144,12 @@ async function loadApp() {
 
     } else if (route === "") {
         console.debug("Loading route: index");
+
+        setMetadata({
+            title: getPageTitle({
+                sections: ["Home"]
+            })
+        });
 
 
 
@@ -163,6 +185,14 @@ async function loadApp() {
         let author = route.substring(3);
 
         author = decodeURIComponent(author);
+
+
+
+        setMetadata({
+            title: getPageTitle({
+                sections: [`Posts by ${author}`]
+            })
+        });
 
 
 
@@ -205,27 +235,29 @@ async function loadApp() {
     } else {
         console.debug("Loading route: search");
 
+        let post = null;
+
 
 
         // Check if the route is a post ID
         if (await Post.idExists(route)) {
             console.debug("Loading route: post by id");
 
-            let post = await Post.getById(route);
-
-            MAIN.appendChild(post.getPostCard());
-
-            breadcrumbs = post.path.split("/");
+            post = await Post.getById(route);
         } else if (await Post.pathExists(route)) {
             console.debug("Loading route: post by path");
 
-            let post = await Post.get(route);
-
-            MAIN.appendChild(post.getPostCard());
-
-            breadcrumbs = post.path.split("/");
+            post = await Post.get(route);
         } else {
             console.debug("Loading route: search by path");
+
+            let segments = route.split("/").reverse().map(s => { s = s.trim(); return s.charAt(0).toUpperCase() + s.slice(1); });
+
+            setMetadata({
+                title: getPageTitle({
+                    sections: segments
+                })
+            });
 
             posts = await Post.search({ path: route, pagination: PAGINATION });
 
@@ -239,6 +271,55 @@ async function loadApp() {
             }
 
             breadcrumbs = route.split("/");
+        }
+
+
+
+        if (post) {
+            MAIN.appendChild(await post.getPostCard());
+
+
+
+            breadcrumbs = post.path.split("/");
+
+
+
+            let postMetadata = [
+                { name: "og:type", content: "article" }
+            ];
+
+
+
+            post?.description ? postMetadata.push({ name: "description", property: "og:description", content: post.description }) : null;
+
+            if (post?.author) {
+                postMetadata.push({ name: "author", property: "og:author", content: post.author })
+                postMetadata.push({ property: "article:author", content: SETTINGS?.get("app.web") + `#by/${post.author}` })
+            }
+
+            if (post?.datePublished) {
+                postMetadata.push({ property: "og:published_time", content: post.datePublished.toISOString() })
+                postMetadata.push({ property: "article:published_time", content: post.datePublished.toISOString() })
+            }
+
+            if (post?.dateUpdated) {
+                postMetadata.push({ property: "og:updated_time", content: post.dateUpdated.toISOString() })
+                postMetadata.push({ property: "article:modified_time", content: post.dateUpdated.toISOString() })
+            }
+
+            post?.image ? postMetadata.push({ name: "image", property: "og:image", content: post.image }) : null;
+
+            await post.fetchRelatedPosts();
+
+
+
+
+            setMetadata({
+                title: getPageTitle({
+                    sections: [post.title || "Untitled post"]
+                }),
+                metadata: postMetadata
+            });
         }
     }
 
